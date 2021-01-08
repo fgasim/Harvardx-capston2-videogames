@@ -1,0 +1,1838 @@
+---
+title: "Capstone Project - Video Games Sales Prediction"
+author: "Fidan Gasim"
+date: "1/3/2021"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    latex_engine: xelatex
+    df_print: kable
+---
+
+```{r include = FALSE}
+library(tinytex)
+
+knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE, cache=TRUE)
+
+options(knitr.table.format = function() {
+  if (knitr::is_latex_output()) 
+    "latex" else "pipe"
+})
+```
+
+\newpage
+
+# Preface
+This report was prepared as part of the capstone project for HarvardX’s Data Science Professional Certificate Program[^1].  
+
+# 1. Introduction
+
+## 1.1 Overview
+
+2020 was dominated by the coronavirus pandemic and the resulting worldwide lockdowns. While many industries and businesses suffered during this time, one industry in particular saw record-breaking sales. As more consumers stayed home, video games filled a void for those looking for entertainment. In fact, it is estimated that COVID-19 lockdowns resulted in a 20% increase in gaming sales to nearly $180 billion in 2020[^2]. Experts predict that this number will only keep growing, as new generation consoles like the Playstation 5 hit the market  in 2021[^3]. 
+
+Although video games have been around since the 1950s, their popularity over the last couple of decades has skyrocketed. This can be attributed in large part to the rise of TV ownership in households as well as the introduction of gaming consoles and home computers. With the proliferation of mobile phones and high speed internet, video games’ sales soared even higher. 
+
+2020 saw the gaming industry’s sales overtake those of the movies and North American sports industries combined[^4]. While the pandemic has contributed to many more new users adopting video games this year, it is interesting to look at what other factors contribute to a video game’s success. Why do some video games become blockbusters while others only have a small number of users? How can we predict how successful a game will be in terms of units sold? As more companies enter the video game domain, it is invaluable to gain an understanding of what features have the greatest impact on sales’ success. 
+
+For the purposes of this project, I will be building a model to predict global sales of video games based on the features available in the dataset. I will be using methods and tools that have been learned during HarvardX’s Data Science Professional Certificate program[^5] as well as concepts studied outside the course. 
+
+This document is structured as follows: Section 1 describes the videogames dataset, outlines the goals of the project and provides a summary of the key steps taken to achieve them. Section 2 outlines the data visualization techniques used to understand the dataset, any insights gained, and the data cleaning and preparation process. Section 3 explains the modeling methods used to tackle the machine learning challenge. Section 4 presents the modeling results and an evaluation of the models’ performances. Section 5 provides a summary of the project, its limitations, and any future work that can be conducted. 
+
+## 1.2	Video Games Dataset
+
+The Video Game Sales with Ratings[^6] dataset I will be using consists of sales information for over 15,000 games that have sold over 100,000 copies, along with other descriptive features such as platform, genre, year of release, publisher, rating, critic and user scores, etc. The dataset by Rush Kirubi[^7] combines data from another video games dataset[^8] with a web scrape from Metacritic[^9]. The initial video games sales dataset by Gregory Smith[^10] was put together using a web scrape from VGChartz[^11], a video game sales tracking website. 
+
+The initial set of features in the dataset were Name, Platform, Year of Release, Genre, Publisher, NA Sales, EU Sales, JP Sales, Other Sales, GlobalSales. The additional features, added later by Rush Kirubi, were Critic Score, Critic Count, User Score, User Count, Developer, and Rating.
+
+Acocrding to Kirubi, there are missing observations as Metacritic only covers a subset of the platforms. Also, some games do not have all the observations of the additional variables. Complete cases (with no NAs) are approximately 6,900. 
+
+## 1.3	Model Evaluation
+
+When working on any data science project, it is important to evaluate the performance of the machine learning model and how it generalizes to new, unseen data. The model evaluation involves comparing the predicted values with the actual outcomes. We need to examine whether the model actually works and how well we can trust its predictions[^12]. 
+
+Evaluating a model’s performance involves using a hold-out test set (data not seen by the model), which provides an “unbiased estimate of learning performance”[^13]. Typically, data that is used to build the model is not used to evaluate it. Using the training set for both building and testing the algorithm can lead to overfitting, which is when the model remembers the whole training set and does not adapt well to new data.  
+
+While there are many types of metrics, such as Classification Accuracy, Confusion Matrix, Area Under Curve (AUC) and F-Measure, that are used to evaluate machine learning algorithms, for this project we will be using a loss function, specifically RMSE (Root Mean Squared Error), to evaluate the performance of our models. 
+
+**Root Mean Squared Error** is the square root of the average squared distance between the actual outcomes and the predicted values. In other words, it measures the difference between predicted values and actual outcomes.
+
+The RMSE is defined as:
+
+$$RMSE=\sqrt{\frac{1}{N} \sum_{u,i}(\hat{y}_{u,i}-y_{u,i})^2}$$
+
+where $y_{u,i}$ is the observed value for observation $i$ and $\hat{y}_{u,i}$ is the predicted value.
+
+## 1.4	Process Outline
+
+Besides data collection, the main steps in a machine learning project include: 
+
+1.	Project Understanding: understanding the project’s goals and creating a workflow of key steps. 
+2.	Data Preparation: downloading, importing and preparing the dataset for analysis. 
+3.	Data Exploration: gaining insights from the data and explore any assumptions before modeling. Any necessary data transformations as well as key features/predictors would be identified in this step. 
+4.	Data Preprocessing: cleaning and transforming the data, such as feature selection, scaling, removing unnecessary information, etc. 
+5.	Modeling Methods: researching and selecting modeling approaches that work best for the type of dataset. 
+6.	Data Modeling: Creating, training and testing the selected models, including any fine tuning of parameters. 
+7.	Model Evaluation: Evaluating the results and model’s performance. 
+8.	Communication: Presenting the final results along with any limitations or recommendations for future work. 
+
+We start off this project by downloading and importing the dataset from kaggle. After a few preprocessing measures, such as formatting variables, we split the dataset into two subsets: vgTrain and vgTest. The vgTrain dataset is used to explore the data, select features, and train the machine learning models, while vgTest is used to test the final algorithm.
+
+RMSE (Root Mean Squared Error) will be used to evaluate how close our predictions are to the true values in the test set. The test set is the final hold-out test set and is not used for training, developing or selecting the machine learning algorithm. We predict video game sales in the test set as if they were unknown.  
+
+In the following section, we will analyze the data to look for trends and any relationships between the features and outcomes. We will produce charts, tables, and summary statistics to show these relationships and trends. The insights gained during the data exploration process will help us build our machine learning model. 
+
+In order to build an effective model, we need to identify the most important features that will help predict global sales with the highest accuracy. Since our outcome variable (Global Sales) is continuous in nature, we will start by training a simple linear regression model, followed by three other models: Elastic Net, Support Vector Machine, and Random Forest. 
+
+The Random Forest model produces the lowest validation error (RMSE) during the training phase and is therefore selected to make predictions using the test set. This gives us an “independent final check on the accuracy of the best model”[^14].
+
+# 2	Data Exploration and Preprocessing
+
+In this section, we start off by installing the necessary packages and loading the corresponding libraries which we’ll be using to analyze our data and train our models. 
+
+```{r, warning=FALSE, message=FALSE, eval=TRUE, echo=FALSE}
+# Global Ops, Packages, Libraries ####
+
+# -> Set global options ####
+options(repos="https://cran.rstudio.com")
+options(timeout=10000, digits=10, pillar.sigfigs=100)
+
+# -> Install packages ####
+list.of.packages <- c("caret", "data.table", "devtools", "dplyr", 
+"DT", "ggplot2", "ggthemes", "h2o", "irlba", "kableExtra", "knitr", "lubridate", "Matrix.utils", "purrr", "RColorBrewer","scales", "tidyr","tidyverse", "splitstackshape", "ggrepel", "tinytex","tree", "gam", "gridExtra", "matrixStats", "GGally", "corrplot", "polycor", "lsr","readr","e1071","randomForest","glmnet","ade4","FSelector","naniar","kernlab")
+
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+```
+
+```{r setup, warning=FALSE, message=FALSE, eval=TRUE}
+# -> Load libraries ####
+library(tidyverse)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(data.table)
+library(knitr) 
+library(kableExtra) 
+library(lubridate)
+library(Matrix.utils) 
+library(DT) 
+library(RColorBrewer) 
+library(ggthemes)
+library(scales)
+library(purrr)
+library(devtools)
+library(ggrepel)
+library(splitstackshape)
+library(tree)
+library(gam)
+library(gridExtra)
+library(matrixStats)
+library(GGally)
+library(corrplot)
+library(lares)
+library(polycor)
+library(lsr)
+library(Boruta)
+library(e1071)
+library(randomForest)
+library(glmnet)
+library(ade4)
+library(FSelector)
+library(naniar)
+library(klaR)
+library(kernlab)
+library(tinytex)
+```
+
+Because the dataset can’t be downloaded directly onto RStudio using the Kaggle link, it is uploaded to my GitHub account. It is then downloaded and imported using the GitHub URL link where it is stored.  
+
+```{r, eval=TRUE, echo=FALSE}
+# Download and import dataset 
+urlfile<-"https://raw.githubusercontent.com/fgasim/Harvardx-capstone2-videogames/main/Video_Games.csv"
+
+videogames<-read.csv(urlfile, 
+                     header = TRUE,
+                     na.strings=c("","N/A","NA"))
+```
+
+First, we’ll explore the basics of the dataset.
+
+```{r,eval=TRUE,echo=TRUE}
+class(videogames) # type of dataset
+
+dim(videogames) # no. of rows and columns in the dataset
+```
+
+The videogames dataset is of class type “data frame”. 
+
+There are 16,719 observations and 16 features (columns). The data types of each column are as follows:
+
+```{r}
+str(videogames) # structure of the dataset - data types of each column
+
+head(videogames) # first few rows of the dataset
+```
+
+The features in the dataset are as follows:
+
+* Name – Name of the video game
+* Platform - Platform to which the game was released 
+* Year - Year of the game's release
+* Genre - Genre of the game
+* Publisher - Publisher of the game
+* NA Sales - Sales in North America (in millions of units)
+* EU Sales - Sales in Europe (in millions of units)
+* JP Sales - Sales in Japan (in millions of units)
+* Other Sales - Sales in the rest of the world (in millions of units)
+* Global Sales - Total worldwide sales (in millions of units)
+* Critic Score - Aggregate score by Metacritic staff
+* Critic Count - The number of critics to come up with the Critic score
+* User Score – Aggregate score by Metacritic's subscribers
+* User Count - Number of users who gave the User Score
+* Developer - Party responsible for creating the game
+* Rating - The ESRB ratings – age limits for games 
+
+We can see that most of the character variables are actually categorical in nature. We will convert these into factors later. 
+
+```{r}
+summary(videogames) # summary statistics of the dataset
+```
+
+By looking at the summary statistics of the dataset, we can see that there are missing values in some of the columns. We will deal with these later. We can also see that the numeric variables are on different scales, which we will have to adjust for some of our models. 
+
+## 2.1	Data Transformation
+
+Before splitting the dataset into training and test sets, we will make a few basic changes to the variables. This won’t be considered data snooping/leaking as we’re not modifying any of the variables based on information that could be found only in the test set. Other changes, like dealing with missing values, scaling, feature selection, etc., will be done at a later stage. 
+
+* Remove regional sales columns we are not interested in using. We will focus only on Global Sales which is an aggregate of all the regional sales columns. 
+* Rename columns for ease of use (eg. ‘Year of Release’). 
+* Create new column that combines the platforms by manufacturer. This could be interesting to look at for visualization purposes as it aggregates all the information for each vendor. Perhaps it could also be more relevant for modeling since the dataset only covers years until 2016, thus excluding any consoles/platforms that were released since. 
+* Convert non-numeric values to numeric – some numeric columns were loaded as character variables. 
+* Rescale the User Score column to match the Critic Score column for visualization purposes.
+* Convert categorical variables to factors - works better for statistical modeling
+
+The following code covers all these steps:
+
+```{r}
+# Remove regional sales columns (we are only interested in Global Sales)
+videogames<-videogames%>%dplyr::select(-c("EU_Sales","JP_Sales","NA_Sales","Other_Sales"))
+
+# Rename columns for ease of use
+videogames<-videogames%>%
+  rename("Year" = Year_of_Release)
+
+# Create new column for the age of the game (number of years since release)
+videogames<-videogames%>%mutate(Age=2020-(Year))
+
+# Create new column - Combine platforms by manufacturer (to reduce number of categories)
+nintendo<-c("3DS","DS","GB","GBA","N64","GC", "NES","SNES","Wii","WiiU")
+sony<-c("PS","PS2","PSP","PS3","PS4","PSV")
+sega<-c("GEN","SCD","DC","GG")
+microsoft<-c("XB","X360", "XOne")
+other<-c("2006","3DO","NG","PCFX","TG16")
+
+Platform_Type<-function(x){
+  if (x %in% sony == TRUE) {return('Sony')}
+  else if(x %in% microsoft == TRUE) {return('Microsoft')}
+  else if(x %in% nintendo == TRUE) {return('Nintendo')}
+  else if(x %in% sega == TRUE) {return('Sega')}
+  else{return('OTHER')}
+}
+
+videogames$Platform_Type<-sapply(videogames$Platform, Platform_Type)
+
+# Convert non-numeric values to numeric
+videogames$Year<-as.numeric(as.character(videogames$Year))
+videogames$User_Count<-as.numeric(as.character(videogames$User_Count))
+videogames$User_Score<-as.numeric(as.character(videogames$User_Score))
+videogames$Critic_Count<-as.numeric(as.character(videogames$Critic_Count))
+videogames$Critic_Score<-as.numeric(as.character(videogames$Critic_Score))
+
+# Rescale the User Score column to match Critic Score column
+videogames$User_Score<- as.numeric(as.character(videogames$User_Score)) *10
+
+# Convert categorical variables to factors - works better for statistical modeling 
+videogames[sapply(videogames, is.character)] <- 
+  lapply(videogames[sapply(videogames, is.character)], as.factor)
+```
+
+## 2.2	Data Splitting
+
+The dataset is randomly split into a training and test set, called vgTrain and vgTest, respectively. VgTrain accounts for 80% of the data and vgTest accounts for the remaining 20%. The vgTrain dataset will be used for data visualization, feature selection, data imputation, and to train our models. The vgTest dataset acts as the final hold-out test set (data not seen by the model) to evaluate the model’s performance. The following code achieves this:
+
+```{r}
+# Split the videogames dataset into training and test sets 
+# Test set will be 20% of video games dataset
+set.seed(1, sample.kind = "Rounding")
+test_index <- createDataPartition(y=videogames$Global_Sales, times = 1, p = 0.2, list = FALSE)
+vgTrain <- videogames[-test_index,]
+vgTest <- videogames[test_index,]
+
+rm(test_index)
+nrow(vgTrain) #check number of observations
+nrow(vgTest) #check number of observations 
+```
+
+**vgTrain** has 13,374 observations and **vgTest** has 3,345 observations. 
+
+Since our dataset is not very large, we won’t be doing a further split to get a validation set. Instead we will use repeated k-fold cross-validation when training our models, which will be covered later. This works better when dealing with small to medium sized datasets. 
+
+## 2.3	Data Cleaning
+
+Now that we have our training set, we can work on cleaning the data. This step involves looking for missing values and deciding what actions to take to deal with them. 
+
+Number of NAs by column:
+```{r, echo=FALSE}
+# Identifying and dealing with missing values 
+apply(vgTrain,2,function(x){sum(is.na(x))})
+```
+
+Percentage of NAs by column:
+```{r, echo=FALSE}
+apply(vgTrain,2, function(x){length(which(is.na(x)))/dim(vgTrain)[1]}) # by percentage
+```
+
+```{r, echo=FALSE}
+gg_miss_var(vgTrain) # missing values across entire datset
+```
+
+We can see that some columns such as Name, Year, Genre, and Publisher only have a small number of missing observations. These are missing at random and can be removed without having a major impact on the dataset. The other columns, however, have large chunks of data missing (in some cases over 50%). We need to make a decision about these as removing them altogether could have a severe effect on our prediction results. 
+
+As we can gather from the dataset notes by Rush Kirubi, many of these values are missing because Metacritic only covers a subset of the platforms in the dataset. We will check where the missing data lies. 
+
+```{r, echo=FALSE}
+# Visualize dataset with missing values 
+gg_miss_fct(x = vgTrain, fct = Year) # missing values by Year
+
+gg_miss_fct(x = vgTrain, fct = Platform_Type) # missing values by Platform Manufacturer
+```
+
+We can see that almost all the data coming from Metacritic (User Score, User Count, Critic Score, Critic Count, Rating, and Developer) is missing prior to 1999. This is because Metacritic was founded in 1999 so any data before that was not recorded for these features. We can also see missing values after 1999, which could be because some platforms are not covered by Metacritic (as mentioned by Rush Kirubi) and therefore some games never got rated. 
+
+We can also see that there are a lot of missing values for the Platform Type – Sega. This could either be because most of their games were released prior to 1999 or because Metacritic does not cover this platform. 
+
+```{r, echo=FALSE}
+vgTrain%>%group_by(Platform_Type,Year)%>%     # check game releases for Sega 
+  filter(Platform_Type=="Sega")%>%
+  summarize(count=n())
+```
+
+We can see that in fact most games released by Sega were prior to 1999. 
+
+In the next step, we will remove all games released prior to 1999 (founding of Metacritic) and after 2016 (final year covered by dataset) and check whether we will have a more complete dataset to work with. 
+
+```{r, echo=FALSE}
+temp<-vgTrain%>%filter(Year>1999 & Year<=2016)
+
+gg_miss_fct(x = temp, fct = Year) # many missing values still remain betweem 1999 and 2016
+
+gg_miss_fct(x = temp, fct = Platform_Type) # many missing values still remain across platforms - Sega specifically
+
+rm(temp) # remove dataset as we won't be using it for analysis 
+```
+
+We’re still left with many missing values between 1999 and 2016 across all platforms.
+
+We will remove all observations with missing Name, Year, Genre, Publisher. This is a small percentage so it won’t harm the data much. We are removing 238 observations in total. We’re still left with many NAs in the features coming from Metacritic, we will deal with these later.
+
+```{r, echo=FALSE}
+vgTrain<-vgTrain%>% drop_na(c(Name, Genre, Publisher, Year))
+
+apply(vgTrain,2,function(x){sum(is.na(x))})    #still have many NAs in some columns
+```
+
+We will also create a new training dataset, **vgTrain2**, with no missing values. This is helpful for data visualization purposes and also when working with certain feature selection methods that do not accept missing values. 
+
+```{r, echo=FALSE}
+# Create new dataframe with no NAs - to be used for visualization purposes
+
+vgTrain2<-vgTrain[complete.cases(vgTrain),] 
+
+apply(vgTrain2,2,function(x){sum(is.na(x))}) # confirm that there are no missing values 
+
+nrow(vgTrain2) # number of observations remaining in dataset
+```
+
+## 2.4	Data Visualization
+
+In this section, we will be analyzing all the features in the training set to gain a better understanding of their nature and structure, and whether there are any significant relationships between the predictors and the target variable. This step will help us in building better models. 
+
+In some sections we will be working with the vgTrain dataset (with NAs) and in some with the vgTrain2 dataset (no NAs). 
+
+
+**Number of Unique Video Games in the Dataset**
+
+```{r, echo=FALSE}
+n_distinct(vgTrain$Name) 
+```
+
+This number is lower than the total number of observations which means some games are released more than once but on different platforms. 
+
+### 2.4.1	Global Sales – Target Variable
+
+Global Sales in this dataset is recorded in millions of units rather than a currency value. 
+
+```{r, echo=FALSE}
+vgTrain%>%
+  group_by(Global_Sales)%>%
+  summarize(n=n())%>%
+  ggplot(aes(x=Global_Sales, y=n))+
+  geom_bar(stat="identity", color="darkgreen")+
+  ylim(0, 250)+
+  scale_x_continuous(labels=c(0,5,10,15,20,25,30),
+                     breaks=c(0,5,10,15,20,25,30),
+                     limits=c(0,30))+
+  labs(x="Global Sales (millions of units)",
+       y="Number of Video Games", 
+       title="Distribution of Global Sales")
+```
+
+As we can see from the graph, the distribution of global sales is right skewed meaning that most video games sell less than 1 million games. 
+
+```{r}
+mean(vgTrain$Global_Sales<1.0) 
+```
+
+In fact, 87.5% of videogames in the dataset sold less than 1 million units, which means a very small portion of games become blockbusters.
+
+
+**Top 10 Highest Selling Games**
+
+```{r, echo=FALSE}
+vgTrain%>%group_by(Name)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  top_n(10)%>%
+  ggplot(aes(x=reorder(Name, sales), y=sales))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Game", y="Global Sales (units sold)", 
+       title= "Highest Selling Games (Top 10)")+
+  coord_flip()
+```
+
+### 2.4.2	Platform
+
+
+**Number of Unique Platforms in the Dataset**
+
+```{r, echo=FALSE}
+n_distinct(vgTrain$Platform)
+```
+
+There are 31 unique platforms in the training dataset.
+
+```{r, echo=FALSE}
+# Global Sales by Platform
+vgTrain%>%group_by(Platform)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  top_n(15)%>%
+  ggplot(aes(x=reorder(Platform,sales), y=sales))+
+  geom_bar(stat="identity", width=0.8, fill="darkgreen")+
+  labs(x="Platform", y="Global Sales (millions of units)", 
+       title= "Distribution of Global Sales by Platform (Top 15)")+
+  coord_flip()
+
+# Game Releases by Platform
+vgTrain%>%
+  group_by(Platform)%>%
+  summarize(n=n())%>%
+  top_n(15)%>%
+  ggplot(aes(x=reorder(Platform,n), y=n))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Platform", y="Count", 
+       title= "Game Releases by Platform (Top 15)")+
+  coord_flip()
+```
+
+The top 5 platforms by global video game sales and by total number of games released are PS2, X360, PS3, Wii, DS, although in varying order as we can see from the graphs above. PS2 dominates both categories. From this information, we can decipher that these are the most popular platforms/consoles and there seems to be a relationship between the number of games released by platform and the number of units sold. 
+
+
+**Platform Type (Manufacturer)**
+
+This refers to the companies that produce, manufacture and release the different platforms/consoles. 
+
+```{r, echo=FALSE}
+# Global Sales by Platform Type 
+vgTrain%>%group_by(Platform_Type)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  ggplot(aes(x=reorder(Platform_Type,sales), y=sales))+
+  geom_bar(stat="identity", width=0.8, fill="darkgreen")+
+  labs(x="Platform Type", 
+       y="Global Sales (millions of units)", 
+       title= "Distribution of Global Sales by Platform Type")+
+  coord_flip()
+
+# Game Releases by Platform Type
+vgTrain%>%
+  group_by(Platform_Type)%>%
+  summarize(n=n())%>%
+  ggplot(aes(x=reorder(Platform_Type,n), y=n))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Platform", y="Count", 
+       title= "Game Releases by Platform Type")+
+  coord_flip()
+```
+
+From these graphs we can see that Sony and Nintendo release the most games and also dominate total global video game sales. According to our intuition, these are the most popular platforms for consumers to own and therefore the games released for these platforms perform better in sales.  
+
+### 2.4.3	Genre
+
+```{r, echo=FALSE}
+# Global Sales by Genre
+vgTrain%>%group_by(Genre)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  arrange(desc(sales))%>%
+  top_n(10)%>%
+  ggplot(aes(x=reorder(Genre, sales), y=sales))+
+  geom_bar(stat="identity", width=0.8, fill="darkgreen")+
+  labs(x="Genre", y="Global Sales (millions of units)", 
+       title= "Distribution of Global Sales by Genre")+
+  coord_flip()
+
+# Game Releases by Genre
+vgTrain%>%
+  group_by(Genre)%>%
+  summarize(n=n())%>%
+  ggplot(aes(x=reorder(Genre,n), y=n))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Genre", y="Count", title= "Game Releases by Genre")+
+  coord_flip()
+```
+
+We can see that the Action, Sports, Shooter, and Role-Playing genres are the most popular. It could be the case that game developers release more games in these categories to match demand and because they’re more likely to be successful in terms of sales. 
+
+### 2.4.4	Publisher & Developer
+
+The categories ‘Publisher’ and ‘Developer’ seem similar in nature as they refer to the entities involved with the videogames but there are key differences. The main difference is that developers are involved with designing and creating the video game whereas publishers take care of delivering the games to consumers through marketing, sales, and PR[^15]. Even though they have separate functions, there is crossover in how they operate. Some developers choose to publish and promote their own video games, while some major publishers have their own developers creating games for them[^16]. 
+
+```{r, echo=FALSE}
+# Global Sales by Publisher (top 15)
+vgTrain%>%group_by(Publisher)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  top_n(15)%>%
+  ggplot(aes(x=reorder(Publisher,sales), y=sales))+
+  geom_bar(stat="identity", width=0.8, fill="darkgreen")+
+  labs(x="Publisher",
+       y="Global Sales (units sold)", 
+       title= "Distribution of Global Sales by Publisher (Top 15)")+
+  coord_flip()
+
+# Game Releases by Publisher (top 15)
+vgTrain%>%
+  group_by(Publisher)%>%
+  summarize(n=n())%>%
+  top_n(15)%>%
+  ggplot(aes(x=reorder(Publisher,n), y=n))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Publisher", y="Count", title= "Game Releases by Publisher (Top 15)")+
+  coord_flip()
+```
+
+The top 3 publishers by global sales are Nintendo, Electronic Arts, and Activision and the top 3 publishers by number of games released are Electronic Arts, Activision, and Ubisoft. There is a clear overlap here. 
+
+
+```{r, echo=FALSE}
+# Global Sales by Developer (top 15)
+vgTrain%>%group_by(Developer)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  arrange(desc(sales))%>%
+  top_n(15)
+```
+
+
+Since the developer column has many NAs, with almost 40% of the data missing, we will use the vgTrain2 dataset (with no NAs) for better visualization of the top developers. 
+
+```{r, echo=FALSE}
+vgTrain2%>%group_by(Developer)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  top_n(15)%>%
+  ggplot(aes(x=reorder(Developer, sales), y=sales))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Developer",
+       y="Global Sales (units sold)", 
+       title= "Distribution of Global Sales by Developer (Top 15)")+
+  coord_flip()
+
+# Game Releases by Developer (top 15)
+vgTrain2%>%
+  group_by(Developer)%>%
+  summarize(n=n())%>%
+  top_n(15)%>%
+  ggplot(aes(x=reorder(Developer,n), y=n))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Developer", y="Count", 
+       title= "Game Releases by Developer (Top 15)")+
+  coord_flip()
+
+total_sales<-sum(vgTrain$Global_Sales)
+
+vgTrain%>%
+  group_by(Developer)%>%
+  summarize(percentage_sales=sum(Global_Sales)/total_sales)%>%
+  arrange(desc(percentage_sales))%>%
+  top_n(10)
+```
+
+
+Although Nintendo is not in the top 5 in terms of number of games released, it dominates global sales. In fact, Nintendo accounts for approximately 6% of global video game sales, the largest of any other developer. This number could be even higher since there are many games in the dataset without a developer listed. It is also important to note that we can find Nintendo across features in the dataset, they are platform manufacturers (Game boy, Wii, etc.), publishers, and developers. This makes Nintendo quite unique compared to the other entities in these columns since they design and market games specifically for their own platforms. 
+
+The other top developers are EA Sports (part of Electronic Arts), Ubisoft, Capcom, and Konami, all of whom are also Publishers, which confirms the theory that many companies in the videogame industry do both roles – designing and distributing games. 
+
+### 2.4.5	Rating
+
+Rating here refers to the ESRB ratings, a regulatory organization that assigns age and content ratings to video games[^17]. There are 7 categories of ratings, as follows:
+
+* RP: Rating Pending
+* EC: Early Childhood – for a preschool audience. No longer used as of 2018 since all these videogames fall under the E (suitable for everyone) category.
+* E: Suitable for everyone. Previously known as Kids to Adults (K-A) until 1998.
+* E10+: Suitable for everyone over 10 years of age
+* T: Teen – generally suited for those above 13 years of age. 
+* M: Mature – generally suited for those above 17 years of age. 
+* AO: Adults Only 18+ - only suitable for those above 18 years of age. 
+
+```{r, echo=FALSE}
+# Global Sales by Age Rating
+vgTrain%>%group_by(Rating)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  arrange(desc(sales))
+
+vgTrain2%>%group_by(Rating)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  ggplot(aes(x=reorder(Rating, sales), y=sales))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Age Rating", y="Global Sales", 
+       title= "Distribution of Global Sales by Rating")+
+  coord_flip()
+
+# Game Releases by Rating 
+vgTrain2%>%
+  group_by(Rating)%>%
+  summarize(n=n())%>%
+  ggplot(aes(x=reorder(Rating,n), y=n))+
+  geom_bar(stat="identity", width = 0.8, fill="darkgreen")+
+  labs(x="Rating", y="Count", title= "Game Releases by Rating")+
+  coord_flip()
+
+```
+
+As we can see, there are many video games without a rating. When we work with the dataset with no NAs, we get a better display of the breakdown of the ratings by sales and game releases. 
+
+Most games seem to fall into four main categories: E (Everyone), M (Mature), T (Teen), E10+. This is no surprise as adult only video games (AO) are a niche market. Videogames that are appropriate for all age groups seem to fair the best in terms of global sales, which makes sense as they’re not constrained by their content. It is interesting to see that the largest number of games are released with a T (Teen) rating, this could be in large part due to the demand for action, shooter, and role-playing games which we discussed earlier in the genre section. These games wouldn’t be appropriate for a younger audience.
+
+### 2.4.6	Critic Score & User Score 
+
+Since both features have many NAs, we will refer to the dataset with no NAs. 
+
+```{r, echo=FALSE}
+# Distribution of Critic Score 
+
+vgTrain2%>%
+  ggplot(aes(x=Critic_Score))+
+  geom_bar(fill="darkgreen")+
+  scale_x_continuous(breaks=seq(0,100,10),
+                     labels=seq(0,100,10))
+
+mean(vgTrain2$Critic_Score)
+
+# Distribution of User Score
+
+vgTrain2%>%
+  ggplot(aes(x=User_Score))+
+  geom_bar(bins=10, fill="darkgreen")+
+  scale_x_continuous(breaks=seq(0,100,10),
+                     labels=seq(0,100,10))
+
+mean(vgTrain2$User_Score)
+```
+
+The distributions of Critic Score and User Score are both left skewed with the average critic score being 70.25 and the average user score being 71.85. This means on average most scores fall between 50-100, with a small portion of games receiving less than 50 points. The distribution of the Critic Score is wider meaning there’s more variance across the board. 
+
+Next we look at the top 10 games by Critic Score and top 10 games by User Score to check if these are similar. For both lists we are using the vgTrain2 dataset which has no missing values.  
+
+
+**Top 10 Games by Critic Score**
+
+```{r, echo=FALSE}
+vgTrain2%>%group_by(Name)%>%
+  summarize(avg=mean(Critic_Score))%>%
+  arrange(desc(avg))%>%
+  top_n(10)
+
+```
+
+
+**Top 10 Games by User Score** 
+
+```{r, echo=FALSE}
+vgTrain2%>%group_by(Name)%>%
+  summarize(avg=mean(User_Score))%>%
+  arrange(desc(avg))%>%
+  top_n(10)
+```
+
+
+There is no overlap between these top 10s meaning critic hits are not always user favorites. 
+
+Next we look at the relationship between critic score and user score to check if there’s any correlation between the two variables. 
+
+
+```{r, echo=FALSE}
+# Plot - Critic Score vs. User Score
+
+vgTrain2%>%
+  ggplot(aes(Critic_Score,User_Score))+
+  geom_point(color="orange")+
+  geom_smooth(color="black")+
+  labs(x="Critic Score", y="User Score", 
+       title="Relationship between Critic Score and User Score")
+```
+
+The graph confirms that there is indeed quite a strong positive correlation between the two variables. The correlation function confirms this:
+
+```{r}
+cor(vgTrain2$User_Score,vgTrain2$Critic_Score)
+```
+
+Correlation does not mean causation. However, it does confirm that many games that receive high critic scores also receive high user scores. From the graph we can see that especially for games which received a critic score over 50, the corresponding user score was also higher (above 50). 
+
+Next we want to check which variable has a stronger relationship with Global Sales, if any at all.
+
+
+```{r, echo=FALSE}
+# Plot - Critic Score vs. Global Sales
+
+criticeffect<-vgTrain2%>%
+  ggplot(aes(x=Critic_Score, y=Global_Sales))+
+  geom_point(color="orange")+
+  geom_smooth(color="black")+
+  xlim(0,100)+
+  ylim(0,40)+
+  labs(x="Critic Score", y="Global Sales", 
+       title="Critic Score vs Global Sales")
+
+# Plot - User Score vs. Global Sales
+
+usereffect<-vgTrain2%>%
+  ggplot(aes(x=User_Score, y=Global_Sales))+
+  geom_point(color="orange")+
+  geom_smooth(color="black")+
+  xlim(0,100)+
+  ylim(0,40)+
+  labs(x="User Score", y="Global Sales", 
+       title="User Score vs Global Sales")
+
+# Plot - Effect of User Score vs Critic Score on Global Sales
+
+grid.arrange(criticeffect,usereffect)
+```
+
+We can see that although there is a linear relationship between User Score and Global Sales, it is not very strong. Critic Score on the other hand has a stronger effect on Global Sales, especially for very highly scored games. Games that receive a critic score above 85 seem to sell exponentially better. We can confirm that Critic Score has a higher correlation with Global Sales than User Score.
+
+Finally, we look at the average critic scores and user scores by genre.  
+
+
+**Top Genres by Critic Score**
+
+```{r, echo=FALSE}
+# Average Critic Scores by Genre
+vgTrain2%>%group_by(Genre)%>%
+  summarize(critic_score=mean(Critic_Score))%>%
+  arrange(desc(critic_score))
+```
+
+
+**Top Genres by User Score** 
+
+```{r, echo=FALSE}
+# Average User Scores by Genre
+vgTrain2%>%group_by(Genre)%>%
+  summarize(user_score=mean(User_Score))%>%
+  arrange(desc(user_score))
+```
+
+Strategy and Role-Playing appear in the top 3 for both scores.  
+
+
+```{r, echo=FALSE}
+# Plot - Critic Scores by Genre
+
+critic_genre<-vgTrain2%>%
+  ggplot(aes(y=Critic_Score, color=Genre))+
+  geom_boxplot()
+
+# Plot - User Scores by Genre
+
+user_genre<-vgTrain2%>%
+  ggplot(aes(y=User_Score, color=Genre))+
+  geom_boxplot()
+
+# User Scores vs Critic Scores by Genre 
+
+grid.arrange(user_genre,critic_genre, nrow=1)
+```
+
+From the graph we can see that average critic scores are lower than average user scores pretty much across the board. In other words, critics rate movies more harshly than users. 
+
+### 2.4.7	Critic Count & User Count
+
+Critic Count and User Count refer to the number of critics and users that have reviewed each game. We start by looking at which games have been rated the most by critics and users (not to be confused with the highest rated in terms of score). This usually coincides with the popularity of a game.  
+
+
+**Top 10 most rated games by Critics**
+
+```{r, echo=FALSE}
+vgTrain2%>%group_by(Name)%>%
+  summarize(count=sum(Critic_Count))%>%
+  arrange(desc(count))%>%
+  top_n(10)
+```
+
+
+**Top 10 most rated games by Users**
+
+```{r, echo=FALSE}
+vgTrain2%>%group_by(Name)%>%
+  summarize(count=sum(User_Count))%>%
+  arrange(desc(count))%>%
+  top_n(10)
+```
+
+
+As opposed to the top games by critic and user scores which saw no overlap, there is definitely some overlap between these two lists. This could be in part due to the fact that games that receive a lot of hype tend to be rated more often as there is a larger customer base playing these games. Furthermore, games that are rated by many critics may have an effect on the number of consumers buying the game and therefore rating them. We can also see that some of these top 10 games are franchises with multiple sequels meaning there is already a loyal customer fan base who are more likely to buy and review newer editions.
+
+We will check some of our assumptions below.  
+
+
+**Is there a relationship between Critic Count and User Count?**  
+
+
+```{r, echo=FALSE}
+# Plot - Critic Count vs User Count
+
+vgTrain2%>%
+  ggplot(aes(Critic_Count,User_Count))+
+  geom_point(color="orange")+
+  geom_smooth(color="black")+
+  labs(x="Critic Count", y="User Count", 
+       title="Relationship between Critic Count and User Count")
+```
+
+```{r}
+#correlation between user count and critic count
+cor(vgTrain2$Critic_Count,vgTrain2$User_Count)
+```
+
+There is indeed a positive linear relationship between the two variables, and beyond a certain point the relationship only gets stronger. In other words, games that have been rated by a large number of critics (80+) are also likely to have also been rated by more users. Because correlation does not imply causation we do not know which variable has the greater effect on the other, or if there is any effect at all. Are critics more likely to review games that are hyped and in demand by customers? Or are customers more likely to buy and therefore review games that have been rated by many critics?  
+
+
+**Are games that are rated more often likely to have higher sales or vice versa?**  
+
+
+We will look at the relationship between these variables and Global Sales to see if we can find more answers.
+
+
+```{r, echo=FALSE}
+# Plot - Critic Count vs. Global Sales
+
+criticcount<-vgTrain2%>%
+  ggplot(aes(x=Critic_Count, y=Global_Sales))+
+  geom_point(color="orange")+
+  geom_smooth(color="black")+
+  labs(x="Critic Count", y="Global Sales", 
+       title="Critic Count vs Global Sales")
+
+# Plot - User Count vs. Global Sales
+
+usercount<-vgTrain2%>%
+  ggplot(aes(x=User_Count, y=Global_Sales))+
+  geom_point(color="orange")+
+  geom_smooth(color="black")+
+  labs(x="User Count", y="Global Sales", 
+       title="User Count vs Global Sales")
+
+# Plot - Effect of User Count vs Critic Count on Global Sales
+
+grid.arrange(criticcount,usercount)
+```
+
+We can see that both variables (Critic Count and User Count) do have a positive linear relationship with Global Sales, however neither relationship seems to be strong. Furthermore, because these variables are on different scales, it is difficult to compare them visually. Instead we will look at their correlations with Global Sales.
+
+```{r}
+# Correlations between the count variables and global sales 
+cor(vgTrain2$Critic_Count,vgTrain2$Global_Sales)
+cor(vgTrain2$User_Count,vgTrain2$Global_Sales)
+```
+
+These numbers confirm that there is a relationship between both these variables and Global Sales, however, not a very strong one. Critic Count has a slightly higher correlation with Global Sales than User Score. Again, it is not clear at this stage whether a game that is rated by more critics and users tends to sell more units or the other way around, i.e. are games that are selling a large number of units likely to be rated by more critics and users?
+
+
+**Are highly rated games likely to be reviewed by more critics and users?**  
+
+
+We will look at whether Critic Count and User Count have any relationship with the scores given to video games, i.e. Critic Score and User Score.
+
+
+```{r, echo=FALSE}
+# Plot - relationship between Critic Score and Critic Count
+
+vgTrain2 %>% 
+  ggplot(aes(Critic_Score, Critic_Count)) + 
+  geom_point(color="orange")+
+  geom_smooth(color="black")
+
+cor(vgTrain2$Critic_Score,vgTrain2$Critic_Count)
+
+# Plot - relationship between User Score and User Count
+
+vgTrain2%>% 
+  ggplot(aes(User_Score, User_Count)) + 
+  geom_point(color="orange")+
+  geom_smooth(color="black")
+
+cor(vgTrain2$User_Score,vgTrain2$User_Count)
+```
+
+Critic Score and Critic Count have a significant positive relationship which means that critically acclaimed games are likely to be reviewed by more critics. We can’t confirm that one causes the other but our intuition says that this could be evidence of a domino effect whereby videogames that start receiving high critic scores gain more acclaim and popularity, prompting even more critics to review them. 
+
+There is no significant relationship between User Score and User Count. This seems slightly odd but perhaps it is because highly rated games (high scores) are not always the most popular or said in a different way, popular games are not always well rated. A game could be very popular, thus reviewed more often, but not necessarily receive high scores and vice versa. This is similar to the movie industry in that some movies receive high ratings but are not watched by a large audience, like independent films, and some movies that are watched by millions (blockbusters) are not highly rated. 
+
+### 2.4.8	Year & Age
+
+Year refers to the year the game was released. Age is a new feature we created that tells us how old each game is. 
+
+```{r, echo=FALSE}
+# Plot - Game Releases per Year 
+
+vgTrain%>%
+  group_by(Year)%>%
+  filter(Year>1985 & Year<=2016)%>%
+  summarize(count=n())%>%
+  ggplot(aes(x=Year, y=count))+
+  geom_bar(stat="identity", fill="darkgreen")+
+  scale_x_continuous(breaks=1985:2016)+
+  theme(axis.text.x = element_text(angle = 90))+
+  labs(x= "Year", y="Number of Games", 
+       title= "Distribution of Game Releases by Year")
+
+# Plot - Global Sales per Year 
+
+vgTrain%>%
+  group_by(Year,Global_Sales)%>%
+  filter(Year>1985 & Year<=2016)%>%
+  summarize(count=n())%>%
+  ggplot(aes(x=Year, y=Global_Sales))+
+  geom_bar(stat="identity", fill="darkgreen")+
+  scale_x_continuous(breaks=1985:2016)+
+  theme(axis.text.x = element_text(angle = 90))+
+  labs(x= "Year", y="Number of Games", 
+       title= "Distribution of Global Sales by Year")
+```
+
+Since the year 2000, video game releases have steadily increased year on year until 2009 when it started decreasing. 2008 saw the highest number of games being released. This decrease over the past decade could be attributed to the popularity of video games on other platforms such as PCs and mobile phones, which are not covered extensively in this dataset.
+
+When looking at global sales throughout the years, again we see a similar steady increase from 2000 until 2009. Both these trends coincide with the release of the Playstation 2 and Xbox consoles in the early 2000s which had a major impact on the video game industry.
+
+```{r, echo=FALSE}
+# Plot - Released Games per Year and Platform Type
+
+games1<-vgTrain%>%
+  ggplot(aes(x=Year))+
+  geom_line(aes(y=..count.., color=Platform_Type), stat="bin", bins=30)+
+  labs(x= "Year", y="Number of Games", 
+       title= "Distribution of Game Releases by Year")
+
+# Plot - Global Sales per Year and Platform Type
+
+games2<-vgTrain%>%
+  group_by(Platform_Type, Year)%>%
+  summarize(sales=sum(Global_Sales))%>%
+  ggplot(aes(x=Year))+
+  geom_line(aes(y=sales, color=Platform_Type))+
+  labs(x= "Year", y="Global Sales (units sold)", 
+       title= "Distribution of Game Sales by Year")
+
+grid.arrange(games1,games2)
+```
+
+When looking at both these variables (game releases and global sales) by platform type, it is interesting to see that Nintendo had exponential growth between 2000-2010, followed by a steady decline afterwards. For the other platforms, their game releases and global sales seem to follow a similar pattern (i.e. they are likely to sell more games in years when they release more games). 
+
+The average age of games in the dataset is:
+
+```{r, echo=FALSE}
+# Average age of games in dataset
+mean(vgTrain$Age) 
+
+# Global Sales by Age of the Game 
+
+vgTrain%>%
+  ggplot(aes(x=Age, y=Global_Sales))+
+  geom_bar(stat="identity", width=0.8, fill="darkgreen")+
+  xlim(0,30)+
+  labs(x="Age of the Game", 
+       y="Global Sales (millions of units)", 
+       title= "Distribution of Global Sales by Age")
+```
+
+Most games in this dataset have been around for over a decade. This confirms our intuition that some games are played even years after their release because they are nostalgic or timeless in nature (eg. Tetris).
+
+When looking at the correlation between the age of the game and global sales, we find that there isn’t much of a relationship between the two variables. 
+
+```{r}
+cor(vgTrain$Global_Sales,vgTrain$Age)   #correlation between sales and age of the game
+```
+
+## 2.5	Feature Selection
+
+In this section, we will aim to select the most relevant features to feed into our machine learning algorithms. Having too many features increases model complexity, making them run too slowly, and may lead to overfitting, thus producing suboptimal results. There are many different techniques one can adopt to do feature selection. For the purposes of this project, we will be using three methods: correlation, Boruta, and RFE (Recursive Feature Elimination).
+
+Before we go on to feature selection, we will first remove a couple of columns we will no longer be using. We are removing the Name column because it won’t be necessary for our model and has too many categories. We are removing the Year column because it is somewhat redundant with the Age column. For feature selection to work effectively, we will be using the dataset with no missing values (vgTrain2).
+
+```{r, echo=FALSE}
+vgTrain2<-vgTrain2%>%dplyr::select(-c("Name","Year")) #update vgTrain2 dataset (no NAs)
+colnames(vgTrain2)
+```
+
+### 2.5.1 Correlation
+
+We will first start with one of the simplest feature selection techniques which is to look at the correlations between features and with the target variable (Global Sales). If any two independent variables have a very high correlation (>0.75) with each other, one of them will have to be removed as their effect would be redundant. We will also look at which features have the highest correlation with the target variable as these could help us make better predictions during the modeling stage. 
+
+
+**Correlation #1**
+
+Since the basic correlation function in R only accepts numeric values, we will first only look at the numeric variables (Global Sales, Age, User Score, User Count, Critic Score, and Critic Count). 
+
+```{r, echo=FALSE}
+# Correlation 1 - numeric features only
+set.seed(1234)
+num_cols <- dplyr::select_if(vgTrain2, is.numeric) 
+cor(num_cols) 
+
+# check which numeric features are the most correlated with target variable 
+cor(num_cols, vgTrain2$Global_Sales) 
+
+include_graphics('./corr_var.png')
+
+# Plot 1 - Correlation Matrix (numeric features) 
+include_graphics('./corrplot1.pdf')
+```
+
+From these results we find the following:
+
+* None of the numeric features are highly correlated with each other so we won't remove any at this stage. 
+* Critic Count, User Count and Critic Score have the highest correlation with Global Sales. It’s interesting to see that the “Count” variables have a stronger correlation with Global Sales than the “Score” variables. This could be in part due to the fact that “popular” games (ones that receive more hype from critics and users) are more likely to sell more units than those that receive high ratings. 
+* Age has no correlation with Global Sales. 
+* User Score has almost zero correlation with Global Sales. 
+
+**Correlation #2**
+
+Since R’s correlation function does not permit categorical variables, I will be using a function[^18] I found online via Srikanth KS (GitHub: talegari[^19]). This function is able to find a correlation matrix for a dataset with mixed variable types. The code is as follows:
+
+```{r, echo=TRUE}
+cor2 <-function(df){
+  
+  stopifnot(inherits(df, "data.frame"))
+  stopifnot(sapply(df, class) %in% c("integer"
+                                     , "numeric"
+                                     , "factor"
+                                     , "character"))
+  
+  cor_fun <- function(pos_1, pos_2){
+    
+    # both are numeric
+    if(class(df[[pos_1]]) %in% c("integer", "numeric") &&
+       class(df[[pos_2]]) %in% c("integer", "numeric")){
+      r <- stats::cor(df[[pos_1]]
+                      , df[[pos_2]]
+                      , use = "pairwise.complete.obs"
+      )
+    }
+    
+    # one is numeric and other is a factor/character
+    if(class(df[[pos_1]]) %in% c("integer", "numeric") &&
+       class(df[[pos_2]]) %in% c("factor", "character")){
+      r <- sqrt(
+        summary(
+          stats::lm(df[[pos_1]] ~ as.factor(df[[pos_2]])))[["r.squared"]])
+    }
+    
+    if(class(df[[pos_2]]) %in% c("integer", "numeric") &&
+       class(df[[pos_1]]) %in% c("factor", "character")){
+      r <- sqrt(
+        summary(
+          stats::lm(df[[pos_2]] ~ as.factor(df[[pos_1]])))[["r.squared"]])
+    }
+    
+    # both are factor/character
+    if(class(df[[pos_1]]) %in% c("factor", "character") &&
+       class(df[[pos_2]]) %in% c("factor", "character")){
+      r <- lsr::cramersV(df[[pos_1]], df[[pos_2]], simulate.p.value = TRUE)
+    }
+    
+    return(r)
+  } 
+  
+  cor_fun <- Vectorize(cor_fun)
+  
+  # now compute corr matrix
+  corrmat <- outer(1:ncol(df)
+                   , 1:ncol(df)
+                   , function(x, y) cor_fun(x, y)
+  )
+  
+  rownames(corrmat) <- colnames(df)
+  colnames(corrmat) <- colnames(df)
+  
+  return(corrmat)
+}
+
+vg_cor <- cor2(vgTrain2)
+
+# Plot 2 - Correlation between numeric and categorical features 
+set.seed(1234)
+
+include_graphics('./corrplot2.pdf')
+```
+
+We can summarize the results as follows:
+
+* The top 5 features that have the highest correlation with Global Sales are: Developer, Publisher, Critic Count, User Count, and Critic Score. 
+* Developer is highly correlated with almost every feature in the dataset, most of them above 0.7. It may need to be removed since it is redundant with most of the variables.
+* Age and Platform are highly correlated (0.86) – one of them may need to be removed. 
+
+
+### 2.5.2 Boruta
+
+Boruta is an improvement on the Random Forest – Variable Importance algorithm, another popular feature selection technique. What’s special about Boruta is that it accepts variables of different types (numeric, categorical, etc.), works well for classification and regression problems, and considers all features that are significant to the target variable (whereas most other methods only rely on a subset of predictors)[^20]. Additionally, the Boruta function can handle relationships between variables. It is also relatively simple to implement and doesn’t take too long to run.
+
+```{r}
+### Boruta function
+set.seed(1234)
+
+boruta_output <- Boruta(Global_Sales ~ ., 
+                        data=vgTrain2, doTrace=0)  
+
+# Get significant variables including tentatives
+boruta_sig <- getSelectedAttributes(boruta_output, withTentative = TRUE)
+print(boruta_sig)  
+
+# Do a tentative rough fix
+roughFixMod <- TentativeRoughFix(boruta_output)
+boruta_sig <- getSelectedAttributes(roughFixMod)
+print(boruta_sig)
+
+# Variable Importance Scores
+imps <- attStats(roughFixMod)
+imps2 = imps[imps$decision != 'Rejected', c('meanImp', 'decision')]
+head(imps2[order(-imps2$meanImp), ])  # descending sort
+
+# Plot variable importance
+plot(boruta_output, cex.axis=.7, las=2, xlab="", main="Variable Importance")
+```
+
+The top 5 features according to Boruta are: Platform, User Count, Rating, Critic Count, Age. Developer and User Score performed the worst.
+
+
+### 2.5.3 RFE (Recursive Feature Elimination)
+
+Lastly, we will be using Recursive Feature Elimination, a popular wrapper-type feature selection technique. Wrapper-type means that a machine learning algorithm is fed into the method, is wrapped by RFE, and then picks the most relevant features[^21]. Filter-based feature selection methods, on the other hand, select features based on the scores the algorithm gives them. According to Jason Brownlee, from Machine Learning Mastery, RFE is technically a “wrapper-style feature selection algorithm that also uses filter-based feature selection internally.”[^22]
+
+RFE is popular because it is easy to setup and implement and because it selects relevant features effectively. The drawback of the RFE method is that it does not accept features with too many categories (over 53).
+
+We will explore the relevance of all the remaining features in our training set by running a Random Forest algorithm within our RFE function. The code is as follows:
+
+```{r, echo=TRUE}
+# Recursive Feature Elimination (RFE)
+
+# Convert categorical variables to character 
+vgTrain2$Developer<-as.character(vgTrain2$Developer) 
+vgTrain2$Publisher<-as.character(vgTrain2$Publisher)
+
+set.seed(1234)
+
+# define the control using a random forest selection function
+rfe_ctrl <- rfeControl(functions=rfFuncs, method="cv", number=10)
+
+# run the RFE algorithm
+rfe_results <- rfe(vgTrain2[,-4], 
+               vgTrain2$Global_Sales, 
+               sizes=c(1:11), 
+               rfeControl=rfe_ctrl)
+
+# summarize the results
+print(rfe_results)
+
+# list the chosen features
+predictors(rfe_results)
+
+# plot the results
+plot(rfe_results, type=c("g", "o"))
+```
+
+The results are as follows:
+
+* The top 5 features according to RFE are: User_Count, Platform, Critic_Count, Critic_Score, Age.
+* The optimal number of features that produced the lowest RMSE was 10, although 8 features produce comparable results.
+
+
+### 2.5.4 Final Results 
+
+Since we have used 4 different feature selection methods (2 correlation techniques, Boruta, and RFE), we want to look at all their results together to decide which features to keep for modeling and which features to remove. 
+
+```{r, echo=FALSE}
+# Create table of Feature Selections results - only list the top 5 for each method
+fsresults<-data_frame(
+  Corr1=c("CriticCount","UserCount","CriticScore","UserScore","Age"),
+  Corr2=c("Developer","Publisher","CriticCount","UserCount","CriticScore"),
+  Boruta=c("Platform","UserCount","Rating", "CriticCount","Age"),
+  RFE=c("UserCount","Platform","CriticCount","CriticScore","Age"),
+)
+print(fsresults)
+```
+
+From this table, we make the following observations:
+
+* Critic Count and User Count appeared in every top 5 ranking.
+* Critic Score and Age were featured 3 times.
+* Platform was featured twice.
+* User Score, Publisher, Developer, and Rating were only featured once.
+* Genre and Platform Type were not featured at all. 
+
+**Features to keep**: Critic Count, User Count, Critic Score, Age, and Platform.
+
+**Features to remove**: User Score, Publisher, Developer, Rating, Genre, Platform Type.
+
+## 2.6	Data Preprocessing for Modeling
+
+These are the steps we will carry out to prepare the training set for modeling: 
+
+1.	Remove the features we won’t be using for modeling, based on the feature selection methods we implemented. 
+2.	Check if there are any missing values – we will use the training set with no missing values since data imputation of such a large number of observations (over 50%) could greatly skew our results. Furthermore, the variables with the highest number of missing values are also the ones with the strongest relationship with the target outcome (eg. User Count, Critic Count, Critic Score) which may create a bias. We end up losing over 50% of the data but for now this seems to be the best option.
+3.	Center and scale the numeric features – some models do not perform well on unscaled data.
+4.	Create dummy variables for categorical variables in training set since some algorithms like linear regression only accept numeric variables.  
+
+The following code implements on all these steps:
+
+```{r, echo=TRUE}
+# Data Preprocessing for Modeling ####
+
+# Select subset of features for modeling (based on Feature Selection) 
+vgTrain2<-vgTrain2%>%
+  dplyr::select(-c(User_Score,Publisher,Developer,Rating,Genre,Platform_Type)) 
+colnames(vgTrain2) #check column names
+nrow(vgTrain2) #check number of observations
+
+train_set<-vgTrain2   #rename to train set
+
+# Check if any NAs in datasets
+apply(vgTrain2,2,function(x){sum(is.na(x))})
+
+# Center and scale numeric features 
+
+preProcValues <- preProcess(train_set, method = c("center", "scale"))
+train_set <- predict(preProcValues, train_set)
+
+# Dummify categorical variables in train set
+
+t_dummy <- dummyVars(" ~ .", data = train_set)
+train_dummy <- data.frame(predict(t_dummy, newdata = train_set))
+head(train_dummy)
+```
+
+Our training set is now ready for modeling.
+
+# 3	Modeling Methods
+
+Since the outcome that we are trying to predict is continuous, in this case Global Sales, we will be training four different models: Linear Regression, Elastic Net, Support Vector Machine, and Random Forest. 
+
+## 3.1	Linear Regression
+
+We start with the simplest of our models – linear regression. Regression is a type of predictive modeling algorithm that focuses on “the relationship between a dependent (target) variable and an independent variable(s) (predictors)”, under the assumption that the independent variable(s) cause(s) the dependent variable [^23]. In other words, the independent variables (predictors) are used to predict the outcome (target variable).  
+
+The benefit of regression is that it allows us to analyze the varying levels of impact of multiple different features on the target variable. It also accepts different types of data such as nominal, interval, or categorical variables for analysis [^24]. 
+
+Linear regression, which we will be using as our first model, makes a few assumptions about the data:
+
+* There is a linear relationship between the predictors and the target variable. 
+* The variables have a Gaussian distribution.
+* The variables are not correlated with each other [^25].  
+
+The model operates by choosing coefficients for each independent predictor that minimizes a loss function (such as RMSE) [^26]. However, if the coefficients are large, it can lead to overfitting on the training dataset, which means the model will not generalize well to new data. In order to counteract this pitfall, we adopt an approach called regularization, which penalizes large coefficients. 
+
+Linear Regression algorithm require inputs to be numeric so we will create dummy variables for the categorical features.  
+
+## 3.2	Elastic Net Regression
+
+Elastic Net Regression is a regularization algorithm that combines the properties of Lasso and Ridge Regression (L1 and L2), two other penalty functions. 
+
+The L1 penalty function penalizes a model based on the “sum of the absolute coefficient values” and the L2 penalty penalizes based on the “sum of the squared coefficient values” [^27]. Both functions minimize the size of all coefficients, however L1 allows some coefficients to be zero, thus removing the predictor from the model, whereas L2 does not allow any predictors to be removed from the model [^28]. 
+
+Elastic Net is a type of penalized linear regression that combines both of these penalties during the training stage. The model has two hyperparameters: “alpha” and “lambda”. Alpha is used to assign weights to each of the L1 and L2 penalties. The lambda value controls how much the sum of both penalties impacts the loss function [^29].   
+
+Through these hyperparameters, elastic net allows a balance between the two penalties, which can help to build a better performing model. 
+
+## 3.3	Support Vector Machine
+
+Support Vector Machine (SVM) is a powerful machine learning algorithm, popularized in the 1990s and still widely used today. The algorithm can be applied to both regression and classification problems. Although the model is linear in nature, it can solve non-linear and often very complex problems with minimal tuning [^30]. The goal of SVM is to create a line or hyperplane that best separates the data inputs (features) into classes [^31]. SVM works particularly well with small to medium sized datasets like the videogames dataset, as the model can take a while to run.
+
+We will be using Support Vector Regression with RBF (Radial Basis Function Kernel) – this is a default kernel that is recommended when there might be a non-linear relationship between features and when it is tricky to select a particular kernel. According to this explanation[^32], “the kernel function transforms our data from non-linear space to linear space.” This permits the algorithm to find the best fit and then data is plotted accordingly. We are adopting this method because it is quite flexible, especially when dealing with different variable distributions. The risk of over-fitting is less with SVM compared to other models as they generalize better to unseen data [^33].
+
+SVM only permits numeric inputs so we will convert our categorial features to dummy variables. 
+
+## 3.4	Random Forest 
+
+Lastly, we will be implementing another popular machine learning algorithm, Random Forest, which can be applied to both regression and classification problems. Random Forests improve on decision tree models by “averaging multiple decision trees (a forest of trees constructed with randomness)” [^34]. It does this by running many random trees (through a method called bootstrap aggregation or bagging) in order to generate several predictions which are then averaged out to produce a final prediction [^35]. Thus, Random Forests often produce more accurate predictions than other ML models. 
+
+Random Forests are robust algorithms that can work with any type of data. They accept data with different distributions and can handle collinearity between variables. They are also less susceptible to outliers than other models. This flexibility, and the fact that they are relatively easy to implement, make them a very attractive choice for our prediction problem. Implementing Random Forest will also help us understand the importance of different features in predicting the target outcome (Global Sales) since RF is a type of feature selection technique. 
+
+One of the drawbacks of Random Forests is that their results may be hard to interpret. One way around this is to look at Variable Importance which aggregates how often a particular feature was used in the individual trees [^36].
+
+# 4	Results
+
+## 4.1	Model Evaluation Function
+
+We start off by defining our loss function, Root Mean Squared Error (RMSE), which we explained in Section 1.3.
+
+```{r, echo=TRUE}
+# Define Root Mean Squared Error (RMSE) - loss function
+RMSE <- function(true_sales, predicted_sales){
+  sqrt(mean((true_sales - predicted_sales)^2))
+}
+```
+
+## 4.2	Control Parameters
+
+Before we can build our models, we have to set control parameters which will be implemented when we train the models on our dataset.
+
+For the purposes of this project, we will be tuning the “Method” parameter which is used to evaluate the accuracy of our models. In other words, how well our model generalizes to unseen data. There are several methods to do this, including splitting the dataset into train/validation/test sets, but because we don’t have a large dataset to work with, we have chosen Repeated K-Fold Cross Validation which builds on k-fold cross validation.
+
+K-fold cross validation is a robust technique that splits the data into k-subsets and for each iteration, the model holds back a subset (as a validation set) and trains on all the other data. The overall accuracy is then calculated by aggregating the accuracies produced by each iteration. Repeated CV repeats this process several times and calculates the model’s accuracy by taking the mean of the repeats.
+
+We will set the number of k-folds at 10, the number of repeats at 3, and save only the final predictions. We will also highlight that the metric of interest is RMSE, which will be input into the training model. The following code achieves these steps:
+
+```{r, echo=TRUE}
+# Set control parameters - run algorithms using 10-fold cross validation repeated 3 times
+
+trControl <- trainControl(method = "repeatedcv",
+                          number = 10,
+                          repeats=3,
+                          savePredictions="final")
+
+metric <- "RMSE"
+```
+
+## 4.3	Linear Regression
+
+We run the linear regression using the train set that has been centered, scaled, and with dummies to represent categorical variables. The code to run the model is as follows:
+
+```{r, echo=TRUE}
+# Linear Regression Model 
+set.seed(1234)
+
+fit_lr<-train(Global_Sales~.,
+              data=train_dummy,
+              method="lm",
+              metric=metric,
+              trControl=trControl)
+
+# Predict on training set
+train_lr<-predict(fit_lr,train_dummy)
+
+# Training error
+RMSE(train_set$Global_Sales, train_lr)
+
+# Validation error
+rmse_lr<-fit_lr$results['RMSE']
+rmse_lr
+```
+
+
+We predict on the training set in order to obtain a training error. We retrieve the validation error from the train object. It is difficult to decipher whether this is a good fit because the validation error is lower than the training error, which is usually the other way around. It’s possible that our training set had many ‘hard’ cases to learn or that our validation set had many ‘easy’ cases to predict. 
+
+```{r, echo=TRUE}
+# Check variable importance
+varImp(fit_lr)
+```
+
+According to the LR model’s Variable Importance, User Count, Critic Count, and Critic Score are the most important features. 
+
+We will create a table to store the RMSE results (Training Error and Validation Error) from each model so we can compare and select the best performing one. 
+
+
+```{r, echo=TRUE}
+# Create a table of results to compare models' performance 
+rmse_results <- tibble(Method = "Linear Regression", 
+                       "Training Error" = RMSE(train_set$Global_Sales, train_lr),
+                       "Validation Error" = rmse_lr$RMSE)
+
+knitr::kable(rmse_results) %>% kable_styling()
+```
+
+## 4.4	Elastic Net
+
+Next, we run the Elastic Net Regression model as follows:
+
+```{r, echo=TRUE}
+# -> Elastic Net Regression ####
+set.seed(1234)
+
+fit_glmnet<-train(Global_Sales~.,
+                  data=train_dummy,
+                  method="glmnet",
+                  metric=metric,
+                  trControl=trControl,
+                  tuneLength=10)
+
+# Predict on training set
+train_glmnet<-predict(fit_glmnet,train_dummy)
+```
+
+The train function allows us to randomly search for the optimal parameters (in this case lambda and alpha) through the tuneLength argument, which sets the total number of unique combinations for the model to search.  
+
+```{r, echo=TRUE}
+# Training error
+RMSE(train_set$Global_Sales, train_glmnet)
+
+# Validation error
+rmse_glmnet<-fit_glmnet$results[row.names(fit_glmnet$bestTune),'RMSE']
+rmse_glmnet
+```
+
+```{r, echo=FALSE}
+# Update results table
+rmse_results <- bind_rows(rmse_results, 
+                          tibble(Method = "Elastic Net", 
+                                 "Training Error" = RMSE(train_set$Global_Sales, train_glmnet),
+                                 "Validation Error" = rmse_glmnet))
+
+knitr::kable(rmse_results) %>% kable_styling()
+```
+
+
+Elastic Net produced a very small improvement on the RMSEs from linear regression. Perhaps the model needs better tuning or that the coefficients didn’t need much regularization. 
+
+```{r, echo=TRUE}
+# Check variable importance
+varImp(fit_glmnet)
+```
+
+The most important features, according to Elastic Net, are the Platform categories.
+
+## 4.5	Support Vector Machine
+
+As mentioned earlier, we will be using a type of SVM called Support Vector Regression with RBF (Radial Basis Function Kernel) which operates with a default kernel.
+
+```{r, echo=TRUE}
+# -> Support Vector Machine ####
+set.seed(1234)
+
+fit_svm<-train(Global_Sales~.,
+               data=train_dummy,
+               method="svmRadial",
+               metric=metric,
+               trControl=trControl)
+
+# Predict on training set
+train_svm<-predict(fit_svm,train_dummy)
+
+# Training error
+RMSE(train_set$Global_Sales, train_svm)
+
+# test_set error
+rmse_svm<-fit_svm$results[row.names(fit_svm$bestTune),'RMSE']
+rmse_svm
+```
+
+```{r, echo=FALSE}
+# Update results table
+
+rmse_results <- bind_rows(rmse_results, 
+                          tibble(Method = "SVM", 
+                                 "Training Error" = RMSE(train_set$Global_Sales, train_svm),
+                                 "Validation Error" = rmse_svm))
+
+knitr::kable(rmse_results) %>% kable_styling()
+```
+
+
+SVM produced a significant improvement on the training error and validation error. It seems to have performed with greater accuracy than linear regression or elastic net.
+
+```{r, echo=TRUE}
+# Check variable importance
+varImp(fit_svm)
+```
+
+Similar to linear regression, the most important features according to SVM are Critic Count, User Count and Critic Score. 
+
+## 4.6	Random Forest 
+
+We will be training two Random Forest models – one with default parameters and the other with tuned parameters. We will start with the default option.
+
+
+**Model 1**
+
+```{r, echo=TRUE}
+# Rf Model 1 - Run the model with default parameters 
+set.seed(1234)
+
+fit_rf1 <- train(Global_Sales~.,
+                 data = train_dummy,    
+                 method = "rf",
+                 metric=metric,
+                 trControl = trControl)
+
+fit_rf1
+
+# Predict on training set
+train_rf1<-predict(fit_rf1,train_dummy)
+
+# Training error
+RMSE(train_set$Global_Sales, train_rf1)
+
+# Validation error
+rmse_rf1<-fit_rf1$results[row.names(fit_rf1$bestTune),'RMSE']
+rmse_rf1
+```
+
+```{r, echo=FALSE}
+# Update results table
+rmse_results <- bind_rows(rmse_results, 
+                          tibble(Method = "RandomForest 1", 
+                                 "Training Error" = RMSE(train_set$Global_Sales, train_rf1),
+                                 "Validation Error"= rmse_rf1))
+
+knitr::kable(rmse_results) %>% kable_styling()
+```
+
+
+We see an improvement in both training error and validation error compared to the other models, however, the training error is significantly lower than the validation error. This could be a sign of the model overfitting which means it might not generalize well to unseen data (the test set). This makes sense as we have not tuned the parameters. 
+
+
+**Model 2**
+
+We will fine tune the parameters which usually have the greatest impact on Random Forest’s performance – mtry, maxnodes, and ntrees. According to the caret package vignette[^37], these parameters are defined as follows:
+
+* mtry: number of randomly selected predictors
+* ntrees: number of trees to train
+* maxnodes: max number of nodes the forest can have
+
+We find the best mtry using the following code:
+
+```{r, echo=TRUE}
+set.seed(1234)
+
+# Search for best mtry
+tuneGrid <- expand.grid(.mtry = c(1: 10)) #Construct a vector with values from 3:10
+
+rf_mtry <- train(Global_Sales~.,
+                 data = train_dummy,
+                 method = "rf",
+                 tuneGrid = tuneGrid,
+                 trControl = trControl,
+                 importance = TRUE,
+                 nodesize = 14,
+                 ntree = 300)
+print(rf_mtry)
+
+rf_mtry$bestTune$mtry # best value of mtry
+
+best_mtry <- rf_mtry$bestTune$mtry #store best mtry for final model
+best_mtry
+```
+
+The best mtry is 10 which we will save to use in our model. 
+Next we find the best values for maxnodes and ntrees, using a helpful function from Guru99.com[^38]. 
+
+```{r, echo=TRUE}
+set.seed(1234)
+
+store_maxnode <- list() #The results of the model will be stored in this list
+tuneGrid <- expand.grid(.mtry = best_mtry) #Use the best value of mtry
+for (maxnodes in c(10: 25)) {   #Compute the model with different values of maxnodes from 10:25.
+  set.seed(1234)
+  rf_maxnode <- train(Global_Sales~.,
+                      data = train_dummy,
+                      method = "rf",
+                      tuneGrid = tuneGrid,
+                      trControl = trControl,
+                      importance = TRUE,
+                      nodesize = 14,
+                      maxnodes = maxnodes,
+                      ntree = 300)
+  current_iteration <- toString(maxnodes)   #Store as a string variable the value of maxnode.
+  store_maxnode[[current_iteration]] <- rf_maxnode   #Save the result of the model in the list.
+}
+results_maxnode <- resamples(store_maxnode)  #Arrange the results of the model
+summary(results_maxnode)  #summarize results
+
+# Search for best ntree - same methodology as maxnode
+set.seed(1234)
+
+store_maxtrees <- list()
+for (ntree in c(250, 300, 350, 400, 450, 500, 550, 600, 800, 1000, 2000)) {
+  set.seed(1234)
+  rf_maxtrees <- train(Global_Sales~.,
+                       data = train_dummy,
+                       method = "rf",
+                       tuneGrid = tuneGrid,
+                       trControl = trControl,
+                       importance = TRUE,
+                       nodesize = 14,
+                       maxnodes = 24,
+                       ntree = ntree)
+  key <- toString(ntree)
+  store_maxtrees[[key]] <- rf_maxtrees
+}
+results_tree <- resamples(store_maxtrees)
+summary(results_tree)
+```
+
+By assessing the results of both functions, we find that the best maxnode=24 and the best ntree=600. We’re now going to train our model with these tuned parameters as follows:
+
+```{r, echo=TRUE}
+# Train new model with tuned parameteres
+set.seed(1234)
+
+fit_rf2 <- train(Global_Sales~.,
+                 train_dummy,
+                 method = "rf",
+                 tuneGrid = tuneGrid,   # best mtry
+                 trControl = trControl,
+                 importance = TRUE,
+                 nodesize = 14,
+                 ntree = 600,   # best ntree
+                 maxnodes = 24,
+                 metric=metric)  # best maxnodes
+
+# Predict on training set
+train_rf2<-predict(fit_rf2,train_dummy)
+
+# Training error
+RMSE(train_set$Global_Sales, train_rf2)
+
+# Validation error 
+rmse_rf2<-fit_rf2$results[row.names(fit_rf2$bestTune),'RMSE']
+rmse_rf2
+
+# Check variable importance
+varImp(fit_rf2)
+```
+
+```{r, echo=FALSE}
+# Update results table
+rmse_results <- bind_rows(rmse_results, 
+                          tibble(Method = "RandomForest 2", 
+                                 "Training Error"= RMSE(train_set$Global_Sales, train_rf2),
+                                 "Validation Error" = rmse_rf2))
+```
+
+From the results we can see that both the training error and validation error are higher than those produced by the first Random Forest model. However, as we mentioned previously the very low training error could have been an indication of the model overfitting. In the case of this model, the gap between the two errors is more optimal.
+
+In terms of Variable Importance, Random Forest ranked the Platform categories and Critic Count at the top. 
+
+
+## 4.7	Final Validation 
+
+
+**Compare Models** 
+
+```{r, echo=FALSE}
+rmse_results<-as.data.frame(rmse_results)
+
+knitr::kable(rmse_results) %>% kable_styling()
+
+results <- resamples(list(LR=fit_lr, ENET=fit_glmnet, 
+                          SVM=fit_svm, RF1=fit_rf1, RF2=fit_rf2))
+
+summary(results)
+dotplot(results)
+```
+
+The errors of the second Random Forest model have more of a balance between bias and variance, the training error is slightly lower than the validation error, which itself is relatively low as well. This is the optimal zone we want to be in as the gap between the two errors is not too large and both values are low. We want a model that trains with great accuracy but that will also generalize well to new data. Based on the RMSE results, our best choice for the final hold-out evaluation is the second Random Forest model. 
+
+### 4.7.1	Preprocessing the test set 
+
+First, we will preprocess the test set using the same preprocessing steps we took to prepare the training set. The following code achieves this:
+
+```{r, echo=TRUE}
+# Preprocessing of training set
+
+# Feature Selection
+vgTest<-vgTest%>%
+  dplyr::select(-c(User_Score,Publisher,Developer,Rating,Genre,Platform_Type,Name,Year))  
+colnames(vgTest) #check column names
+nrow(vgTest) #check number of observations
+
+# Check if any NAs in datasets
+apply(vgTest,2,function(x){sum(is.na(x))})
+
+# Remove NAs
+vgTest<-vgTest[complete.cases(vgTest),] 
+nrow(vgTest)
+
+# Rename to test set
+test_set<-vgTest      
+
+# Center and scale numeric features 
+test_set<-predict(preProcValues, test_set)
+
+# Dummify categorical variables in test set 
+t2_dummy <- dummyVars(" ~ .", data = test_set)
+test_set_dummy <- data.frame(predict(t2_dummy, newdata = test_set))
+head(test_set_dummy)
+```
+
+### 4.7.2	Baseline Model 
+
+For point of comparison, we will build a baseline model that predicts global sales using just the mean, as follows:
+
+```{r, echo=TRUE}
+# Baseline Model - Guessing Global Sales based on the mean
+set.seed(1234)
+
+# Mean of observed Global Sales
+mu<-mean(train_set$Global_Sales)
+mu
+
+# Predict all unknown ratings with overall mean 
+
+naive_rmse <- RMSE(test_set$Global_Sales, mu)
+naive_rmse
+```
+
+```{r, echo=FALSE}
+rmse_results <- bind_rows(rmse_results,
+                          tibble(Method = "Baseline", 
+                                 RMSE = RMSE(test_set$Global_Sales, mu)))
+
+knitr::kable(rmse_results, caption="RMSE Results") %>% kable_styling(bootstrap_options = c("striped", "hover","condensed"))
+```
+
+Any final model we implement should perform better than this. 
+
+### 4.7.3	Testing the Final Model 
+
+We start the final validation by training the best model (Random Forest #2) on all available data, which means we won’t be conducting any resampling or cross-validation during this phase so the trainControl argument will be removed. 
+
+```{r, echo=TRUE}
+# Final model - Random Forest with default parameters
+
+set.seed(1234)
+
+# Train the final model using all available data 
+fit_final <- train(Global_Sales~.,
+                   train_dummy,
+                   method = "rf",
+                   tuneGrid = tuneGrid,   # best mtry
+                   importance = TRUE,
+                   nodesize = 14,
+                   ntree = 600,   # best ntree
+                   maxnodes = 24,
+                   metric=metric)  # best maxnodes
+
+fit_final
+```
+
+Now we make predictions on the test set (unseen data) using the final model. 
+
+```{r, echo=TRUE}
+# Predicting on test set 
+test_final<- predict(fit_final, test_set_dummy) 
+
+# Check model performance
+RMSE(test_final, test_set_dummy$Global_Sales)
+
+# Check variable importance
+varImp(fit_final)
+```
+
+We will now evaluate the results to check how the final algorithm performed compared to the other models:
+
+**RESULTS** 
+
+
+```{r, echo=FALSE}
+# Update results table
+rmse_results <- bind_rows(rmse_results, 
+                          tibble(Method = "Final Model", 
+                                 RMSE = RMSE(test_final,test_set_dummy$Global_Sales)))
+```
+
+```{r, echo=FALSE}
+knitr::kable(rmse_results, caption="RMSE Results") %>% kable_styling(bootstrap_options = c("striped", "hover","condensed"))
+```
+
+The final model outperformed the validation error produced by Random Forest #2 during the training phase, minimizing the RMSE even further, which is a good sign that the model generalizes well to unseen data. This means the model is flexible enough to produce accurate predictions as new data gets introduced. 
+
+# 5	Conclusion
+
+We started off our project by preparing our dataset and analyzing it for any insights that might be helpful in building our predictor model. From our analysis, we saw that some features had a stronger correlation with the target variable than others. During the feature selection stage, we finalized 5 features (User Count, Critic Count, Critic Score, Age, and Platform) to input into our machine learning models. 
+
+We started off by building a simple linear regression model. Although this was a good starting point, it produced quite a high validation error. We then used Elastic Net Regression, which implements L1 and L2 regularization by penalizing coefficients. This did not have a significant effect on the RMSE. We then trained an SVM Radial model which produced much better results than the previous two models. Finally, we trained two Random Forest models, one with default parameters and one with tuned parameters. The second model outperformed all the other models producing a low training error and a low validation error, with a small gap between the two numbers. This is the model we chose to make our final predictions.
+
+Finally, we evaluated the performance of our model by training on the whole dataset and making predictions on the test set (unseen data). The model performed even better on the new data which confirmed that it was an optimal choice. 
+
+This project showed that the key features in determining global sales of video games are user count, critic count, critic score, age of the game, and the platform. This information could be used by gaming companies to make better decisions about how to develop, design, market and sell games globally.  
+
+## 5.1	Limitations
+
+There were a few limitations when working with this dataset, such as the large proportion of missing values (over 50%) in key features that could have helped make more accurate predictions. There was also no data since 2016 so the information was slightly outdated and may have skipped more recent platforms. From a data collection perspective, the dataset did not cover mobile phone videogames, which is the largest contributor to global video games sales and also the fastest growing segment [^39]. PC games were also not covered extensively in this dataset, another major contributor to global video game sales. 
+
+Our model did not take into account that some games are released across multiple platforms (Playstation and XBOX) while others are released exclusively to one platform (Nintendo). This could have an impact on predictions. 
+
+The Random Forest models, although robust and better at generalizing to new data, take a long time to run. This may be an issue when working with larger datasets. 
+
+## 5.2	Future Work
+
+The goal of this report was to predict global sales for video games based on various features in the dataset. We did this using four different machine learning algorithms – Linear Regression, Elastic Net, Support Vector Machine, and Random Forest, although there are others such as k-Nearest Neighbors.  
+
+Some ideas for future work include:
+
+* Updating the dataset for years 2016-2020 by either web scraping or data collection, and then running our final model again to see how it performs.
+* Feature Engineering #1 – creating a new feature for Console Type (home or portable), with the portable category including mobile phones, to check whether this would have an impact on predicting sales. 
+* Feature Engineering #2 – creating a new feature to separate exclusive games from multi-platform ones. Again this would be to check whether our model could make better predictions. 
+* Data Imputation – impute the missing values and run our models again to check whether they will perform even better.
+* Ensemble Modeling – building and training an ensemble of all our models to check whether this performs better than our final model. 
+
+
+[^1]:https://www.edx.org/professional-certificate/harvardx-data-science
+[^2]:https://www.marketwatch.com/story/videogames-are-a-bigger-industry-than-sports-and-movies-combined-thanks-to-the-pandemic-11608654990
+[^3]:https://www.marketwatch.com/story/videogames-are-a-bigger-industry-than-sports-and-movies-combined-thanks-to-the-pandemic-11608654990
+[^4]:https://www.marketwatch.com/story/videogames-are-a-bigger-industry-than-sports-and-movies-combined-thanks-to-the-pandemic-11608654990
+[^5]:https://www.edx.org/professional-certificate/harvardx-data-science
+[^6]:https://www.kaggle.com/rush4ratio/video-game-sales-with-ratings
+[^7]:https://www.kaggle.com/rush4ratio
+[^8]:https://www.kaggle.com/gregorut/videogamesales
+[^9]:https://www.metacritic.com/
+[^10]:https://www.kaggle.com/gregorut
+[^11]:https://www.vgchartz.com/
+[^12]:https://heartbeat.fritz.ai/introduction-to-machine-learning-model-evaluation-fa859e1b2d7f
+[^13]:https://heartbeat.fritz.ai/introduction-to-machine-learning-model-evaluation-fa859e1b2d7f
+[^14]:https://machinelearningmastery.com/machine-learning-in-r-step-by-step/
+[^15]:https://medium.com/@PaulTrowe/the-difference-between-a-video-game-developer-and-publisher-c6038324ee56#:~:text=Usually%2C%20the%20core%20difference,sales%2C%20and%20PR%20of%20it.&text=When%20publishers%20like%20a%20game,create%20milestones%20for%20its%20production.
+[^16]:https://medium.com/@PaulTrowe/the-difference-between-a-video-game-developer-and-publisher-c6038324ee56#:~:text=Usually%2C%20the%20core%20difference,sales%2C%20and%20PR%20of%20it.&text=When%20publishers%20like%20a%20game,create%20milestones%20for%20its%20production.
+[^17]:https://en.wikipedia.org/wiki/Entertainment_Software_Rating_Board
+[^18]:https://gist.github.com/talegari/b514dbbc651c25e2075d88f31d48057b
+[^19]:https://gist.github.com/talegari
+[^20]:https://www.datasciencecentral.com/profiles/blogs/select-important-variables-using-boruta-algorithm
+[^21]:https://machinelearningmastery.com/rfe-feature-selection-in-python/
+[^22]:https://machinelearningmastery.com/rfe-feature-selection-in-python/
+[^23]:https://medium.com/swlh/predictive-modelling-using-linear-regression-e0e399dc4745#:~:text=Linear%20regression%20is%20one%20of,given%20predictor%20variable(s).
+[^24]:https://medium.com/swlh/predictive-modelling-using-linear-regression-e0e399dc4745#:~:text=Linear%20regression%20is%20one%20of,given%20predictor%20variable(s).
+[^25]:https://www.pluralsight.com/guides/linear-lasso-and-ridge-regression-with-r
+[^26]:https://www.pluralsight.com/guides/linear-lasso-and-ridge-regression-with-r
+[^27]:https://machinelearningmastery.com/elastic-net-regression-in-python/
+[^28]:https://machinelearningmastery.com/elastic-net-regression-in-python/
+[^29]:https://machinelearningmastery.com/elastic-net-regression-in-python/
+[^30]:https://towardsdatascience.com/https-medium-com-pupalerushikesh-svm-f4b42800e989
+[^31]:https://towardsdatascience.com/https-medium-com-pupalerushikesh-svm-f4b42800e989
+[^32]:https://rpubs.com/linkonabe/SLSvsSVR
+[^33]:https://statinfer.com/204-6-8-svm-advantages-disadvantages-applications/
+[^34]:https://rafalab.github.io/dsbook/examples-of-algorithms.html
+[^35]:https://rafalab.github.io/dsbook/examples-of-algorithms.html
+[^36]:https://rafalab.github.io/dsbook/examples-of-algorithms.html
+[^37]:https://topepo.github.io/caret/train-models-by-tag.html#random-forest
+[^38]:https://www.guru99.com/r-random-forest-tutorial.html
+[^39]:https://www.reuters.com/article/esports-business-gaming-revenues-idUSFLM8jkJMl
